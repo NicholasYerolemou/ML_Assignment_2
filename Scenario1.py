@@ -12,25 +12,6 @@ import random
 # epoch ends when you reach terminal state
 
 
-def setRewards():
-    # sets rewards of walls to -100
-    for x in range(13):
-        for y in range(13):
-            if(y == 0 or y == 12 or x == 0 or x == 12):
-                rewards[x, y] = -100
-            if(y < 7 and x == 6):
-                rewards[x, y] = -100
-            if(y > 5 and x == 7):
-                rewards[x, y] = -100
-            if(x < 12 and y == 6):
-                rewards[x, y] = -100
-
-    rewards[3, 6] = -1
-    rewards[6, 2] = -1
-    rewards[10, 6] = -1
-    rewards[7, 9] = -1
-
-
 # find the action with the highest reward, returns a num 0-3 representing an action
 
 
@@ -45,8 +26,7 @@ actions = [FR.UP, FR.DOWN, FR.LEFT, FR.RIGHT]
 ac = ["up", 'down', 'left', 'right']
 # initialises the rewards for every block to -1
 rewards = np.full((rows, columns), -1)
-setRewards()  # sets the reward values
-print(rewards)
+
 
 epsilon = 0.2  # makes a random choice 20% of the time
 
@@ -82,7 +62,7 @@ for episodes in range(episodes):
 
     print("episode", episodes)
     counter = 0
-    while(FR.isTerminal() == False and counter < 10000):
+    while(FR.isTerminal() == False):
        # print("QQQQQQ", Q_values[FR.getPosition(), :])
         numMoves += 1
         counter += 1
