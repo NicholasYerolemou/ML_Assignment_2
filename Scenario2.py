@@ -1,4 +1,4 @@
-
+import sys
 import re
 from sqlalchemy import column
 from torch import initial_seed
@@ -7,44 +7,31 @@ from random import randrange
 import numpy as np
 import random
 import matplotlib.pyplot as plt
-# https://www.analyticsvidhya.com/blog/2021/04/q-learning-algorithm-with-step-by-step-implementation-using-python/
 
 
-# epoch ends when you reach terminal state
+stock = False
+if(len(sys.argv) > 1):
+    if(sys.argv[1] == "-stochastic"):
+        stock = True
+    else:
+        stock = False
 
-
-# find the action with the highest reward, returns a num 0-3 representing an action
-
-
-FR = FourRooms.FourRooms('multi', False)
+FR = FourRooms.FourRooms('multi', stock)
 
 rows = 13
 columns = 13
-# (state,(Q value for all 4 actions))(state size, action size)
-
 
 Q_values = np.zeros((rows*columns, 4))
-multi_Q_values = [np.zeros((rows*columns, 4)), np.zeros((rows*columns, 4)),
-                  np.zeros((rows*columns, 4))]  # different Q values for each package, red, green, blue
 actions = [FR.UP, FR.DOWN, FR.LEFT, FR.RIGHT]
 
-ac = ["up", 'down', 'left', 'right']
-# initialises the rewards for every block to -1
-rewards = np.full((rows, columns), -1)
+epsilon = 0.2  # makes a random choice 20% of the time
 
 
-epsilon = 0.4  # makes a random choice 20% of the time
-
-# Q value = adding the maximum reward attainable from future states to the reward for achieving its current state
-
-
-def convert(pos):
+def convert(pos):  # converts coord to array position
     return pos[0] + 13*pos[1]
 
 
 def chooseAction(FR):
-    # print("Choose functionQ values for state", FR.getPosition(),
-    # ":", Q_values[convert(FR.getPosition())])
     if random.uniform(0, 1) < epsilon:  # random action
         return random.randint(0, 3)
 
@@ -59,57 +46,55 @@ learning_rate = 0.9
 
 episodes = 5000
 numMoves = 0
-counter = 0
+
 
 minMoves = 100000
-plot = []
-x = []
+# plot = [] #holds the number of actions taken before terminal state for each episode, to be plotted
+#x = []
+
+
 initialState = FR.getPosition()
 print("Agent initial state", initialState)
 for episodes in range(episodes):
-    x.append(episodes)
+    # x.append(episodes)
     FR.newEpoch()
 
     counter = 0
     while(FR.isTerminal() == False):
-       # print("QQQQQQ", Q_values[FR.getPosition(), :])
         numMoves += 1
-        counter += 1
 
         # choose an action
 
         actionNum = chooseAction(FR)
-        # print("we are in state", FR.getPosition())
-        # print("we are moving:", ac[actionNum])
         oldState = FR.getPosition()  # the old state before our action
         cellType, state, packagesLeft, isTerminal = FR.takeAction(
             actions[actionNum])  # if the action takes me into a non traversable space the same position is returned
 
         if(cellType == 1 or cellType == 2 or cellType == 3):  # the cell type is a package
-            reward = 100
+            if(packagesLeft > 0):
+                reward = (1/packagesLeft)*100
+            else:
+                reward = 100
         elif(oldState == state):
             reward = -100
         else:
-            reward = -1  # rewards[state]
-
-        # print("moved to state", state, "with reward", reward)
+            reward = -1
 
         # update Q values
-
         Q_values[convert(oldState), actionNum] = Q_values[convert(oldState), actionNum] + learning_rate * \
             (reward + discount_factor *
              np.max(Q_values[convert(state), :])-Q_values[convert(oldState), actionNum])
-    plot.append(numMoves)
+    # plot.append(numMoves)
     if (numMoves < minMoves):
         minMoves = numMoves
     if(episodes % 100 == 0):
         print(print("episode", episodes))
-        print("Average number of actions taken for past 1000 episodes:", numMoves/100)
+        print("Average number of actions taken for past 100 episodes:", numMoves/100)
         numMoves = 0
         # print()
 
 
 print("Min number of moves taken over all episodes:", minMoves)
 FR.showPath(-1)
-plt.plot(x, plot)
+#plt.plot(x, plot)
 plt.show()
