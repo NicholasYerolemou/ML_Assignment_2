@@ -6,7 +6,6 @@ import FourRooms
 from random import randrange
 import numpy as np
 import random
-import matplotlib.pyplot as plt
 # https://www.analyticsvidhya.com/blog/2021/04/q-learning-algorithm-with-step-by-step-implementation-using-python/
 
 
@@ -16,16 +15,18 @@ import matplotlib.pyplot as plt
 # find the action with the highest reward, returns a num 0-3 representing an action
 
 
-FR = FourRooms.FourRooms('multi', False)
+FR = FourRooms.FourRooms('rgb', False)
 
 rows = 13
 columns = 13
 # (state,(Q value for all 4 actions))(state size, action size)
+red_Q_values = np.zeros((rows*columns, 4))
+green_Q_values = np.zeros((rows*columns, 4))
+blue_Q_values = np.zeros((rows*columns, 4))
+
+Q = [blue_Q_values, green_Q_values, red_Q_values]
 
 
-Q_values = np.zeros((rows*columns, 4))
-multi_Q_values = [np.zeros((rows*columns, 4)), np.zeros((rows*columns, 4)),
-                  np.zeros((rows*columns, 4))]  # different Q values for each package, red, green, blue
 actions = [FR.UP, FR.DOWN, FR.LEFT, FR.RIGHT]
 
 ac = ["up", 'down', 'left', 'right']
@@ -42,34 +43,33 @@ def convert(pos):
     return pos[0] + 13*pos[1]
 
 
-def chooseAction(FR):
+def chooseAction(FR, Q):
     # print("Choose functionQ values for state", FR.getPosition(),
     # ":", Q_values[convert(FR.getPosition())])
     if random.uniform(0, 1) < epsilon:  # random action
         return random.randint(0, 3)
 
     else:  # highest Q action
-        return np.argmax(Q_values[convert(FR.getPosition())])
+        return np.argmax(Q[convert(FR.getPosition())])
 
 
-packages_found = []
 # initialise Q values
-discount_factor = 0.9
-learning_rate = 0.9
+discount_factor = 0.8
+learning_rate = 0.8
 
-episodes = 5000
+episodes = 1
 numMoves = 0
 counter = 0
-
-minMoves = 100000
-plot = []
-x = []
+packagesLeft = 3
 initialState = FR.getPosition()
+
+
 print("Agent initial state", initialState)
 for episodes in range(episodes):
-    x.append(episodes)
+    order = []
     FR.newEpoch()
 
+    print("episode", episodes)
     counter = 0
     while(FR.isTerminal() == False):
        # print("QQQQQQ", Q_values[FR.getPosition(), :])
@@ -78,7 +78,7 @@ for episodes in range(episodes):
 
         # choose an action
 
-        actionNum = chooseAction(FR)
+        actionNum = chooseAction(FR, Q[packagesLeft-1])
         # print("we are in state", FR.getPosition())
         # print("we are moving:", ac[actionNum])
         oldState = FR.getPosition()  # the old state before our action
@@ -86,7 +86,33 @@ for episodes in range(episodes):
             actions[actionNum])  # if the action takes me into a non traversable space the same position is returned
 
         if(cellType == 1 or cellType == 2 or cellType == 3):  # the cell type is a package
-            reward = 100
+            if(cellType == 1):
+                order.append("red")
+                print("red found")
+                print("the green Q values are", Q[packagesLeft-1])
+            elif(cellType == 2):
+                order.append("green")
+                print("green found")
+                print("the blue Q values are", Q[packagesLeft-1])
+            elif(cellType == 3):
+                order.append("blue")
+                print("blue found")
+
+            if(packagesLeft == 2):  # foumd the red package
+                reward = 100
+            else:
+                reward = -100  # avoid this package
+
+            if(packagesLeft == 1):  # foumd the green package
+                reward = 100
+            else:
+                reward = -100  # avoid this package
+
+            if(packagesLeft == 0):  # found the blue package
+                reward = 100
+            else:
+                reward = -100  # avoid this package
+
         elif(oldState == state):
             reward = -100
         else:
@@ -96,20 +122,13 @@ for episodes in range(episodes):
 
         # update Q values
 
-        Q_values[convert(oldState), actionNum] = Q_values[convert(oldState), actionNum] + learning_rate * \
+        Q[packagesLeft-1][convert(oldState), actionNum] = Q[packagesLeft-1][convert(oldState), actionNum] + learning_rate * \
             (reward + discount_factor *
-             np.max(Q_values[convert(state), :])-Q_values[convert(oldState), actionNum])
-    plot.append(numMoves)
-    if (numMoves < minMoves):
-        minMoves = numMoves
-    if(episodes % 100 == 0):
-        print(print("episode", episodes))
-        print("Average number of actions taken for past 1000 episodes:", numMoves/100)
-        numMoves = 0
-        # print()
+             np.max(Q[packagesLeft-1][convert(state), :])-Q[packagesLeft-1][convert(oldState), actionNum])
+    print("num moves", numMoves)
+    print(order)
+    numMoves = 0
 
 
-print("Min number of moves taken over all episodes:", minMoves)
+# print(Q_values)
 FR.showPath(-1)
-plt.plot(x, plot)
-plt.show()
